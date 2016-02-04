@@ -41,7 +41,46 @@ void ObjectMng::addObject(TrObject obj)
 }
 
 ////////////////////////////////////////////////////////////
-void ObjectMng::exec(TrAction *action, long ts)
+void ObjectMng::write(TrAction *action)
+{
+    QSqlQuery query(db);
+    QString str;
+    TrObject obj;
+    // read rts
+    str = QString("SELECT * FROM %1 WHERE GROUP BY version DESC LIMIT 1;").arg(action->trObject->name).arg(ts);
+    if(query.exec() && query.next()){
+//        obj.version = query.value("version").toLongLong();
+        obj.rts = query.value("rts").toLongLong();
+//        obj.wts = query.value("wts").toLongLong();
+//        obj.value = query.value("value").toString();
+        qDebug() << str;
+    }else{
+        qDebug() << "Error: " << str << query.lastError();
+    }
+
+    if(action->ts < obj.rts){
+        // abort!
+        return;
+    }
+    // write
+    action->trObject->wts = action->ts;
+    str = QString("INSERT INTO %1 (rts, wts, value) VALUES (%2, %3, '%4');")
+            .arg(action->trObject->name)
+            .arg(action->trObject->rts)
+            .arg(action->trObject->wts)
+            .arg(action->trObject->value);
+    if(query.exec()){
+        emit sync(jsonStr);
+        qDebug() << str;
+    }else{
+        qDebug() << "Error: " << str << query.lastError();
+    }
+
+}
+
+
+////////////////////////////////////////////////////////////
+void ObjectMng::read(TrAction *action)
 {
     QSqlQuery query(db);
     QString str;
@@ -53,33 +92,32 @@ void ObjectMng::exec(TrAction *action, long ts)
         obj.rts = query.value("rts").toLongLong();
         obj.wts = query.value("wts").toLongLong();
         obj.value = query.value("value").toString();
+        qDebug() << str;
     }else{
-        qDebug() << query.lastError();
+        qDebug() << "Error:" << str << query.lastError();
+        return;
     }
-    qDebug() << str;
 
-    if(action->type == READ){
-        action->trObject = obj;
-        action->trObject->rts = ts;
-    }else{
-        if(tr >= obj.rts){
-            action->trObject->wts = ts;
+    action->trObject = obj;
+    if(action->trObject->rts < action->ts){
+        action->trObject->rts = action->ts;
+
+        str = QString("INSERT INTO %1 (rts, wts, value) VALUES (%2, %3, '%4');")
+                .arg(action->trObject->name)
+                .arg(action->trObject->rts)
+                .arg(action->trObject->wts)
+                .arg(action->trObject->value);
+
+        if(query.exec()){
+            emit sync(jsonStr);
+            qDebug() << str;
+        }else{
+            qDebug() << "Error:" << str << query.lastError();
+//            return;
         }
     }
-
-    str = QString("INSERT INTO %1 (rts, wts, value) VALUES (%2, %3, '%4');")
-            .arg(action->trObject->name)
-            .arg(action->trObject->rts)
-            .arg(action->trObject->wts)
-            .arg(action->trObject->value);
-
-    if(query.exec()){
-        emit sync(jsonStr);
-    }else{
-        qDebug() << query.lastError();
-    }
-    qDebug() << str;
 }
+
 
 ////////////////////////////////////////////////////////////
 void approve(QString jsonStr){

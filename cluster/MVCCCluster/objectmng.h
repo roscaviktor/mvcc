@@ -21,7 +21,8 @@ public:
     void setObjectListStr(const QString &objectListStr);
 
     void addObject(TrObject obj);
-    void exec(TrAction *action, long ts);
+    void read(TrAction *action);
+    void write(TrAction *action);
 
 signals:
     bool sync(QString);

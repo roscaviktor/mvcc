@@ -17,6 +17,7 @@ typedef enum _TrActionType{
 }TrActionType;
 
 typedef struct _TrAction{
+    long ts;
     TrActionType type;
     TrObject *trObject;
 }TrAction;
