@@ -7,6 +7,22 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QThread>
+#include <QMutex>
+
+#ifdef DEBUG_SQL
+    #define DEBUG_SQLITE(str) qDebug() << << str;
+#else
+    #define DEBUG_SQLITE(str)
+#endif
+
+#ifdef DEBUG_ACTIONS
+//    #define DEBUG_ACTION(str) qDebug() << QThread::currentThread() << str;
+    #define DEBUG_ACTION(str) qDebug() << str;
+#else
+    #define DEBUG_ACTION(str)
+#endif
+
 
 class ObjectMng : public QObject
 {
@@ -14,27 +30,34 @@ class ObjectMng : public QObject
 public:
     explicit ObjectMng(QObject *parent = 0);
 
+    void add(TrObject obj);
+    bool exec(TrAction);
+
     QList<TrObject> objectList() const;
     void setObjectList(const QList<TrObject> &objectList);
 
     QString objectListStr() const;
     void setObjectListStr(const QString &objectListStr);
 
-    void addObject(TrObject obj);
-    void read(TrAction *action);
-    void write(TrAction *action);
-
 signals:
-    bool sync(QString);
+    void sync(QString);
+    void actionDone();
 
 public slots:
     void init();
 
 private:
+    bool read(TrAction action);
+    bool write(TrAction action);
+
+    void approve(QString jsonStr);
+
     QList<TrObject> m_objectList;   // object struct list
     QString m_objectListStr;        // object struct list to string
 
     QSqlDatabase db;
+
+    QMutex mMutex;
 };
 
 #endif // OBJECTMNG_H

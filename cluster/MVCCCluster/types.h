@@ -18,8 +18,9 @@ typedef enum _TrActionType{
 
 typedef struct _TrAction{
     long ts;
+    QString trName;
     TrActionType type;
-    TrObject *trObject;
+    TrObject trObject;
 }TrAction;
 
 typedef enum _TrStatus{
