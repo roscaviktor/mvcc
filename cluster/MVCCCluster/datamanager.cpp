@@ -1,11 +1,11 @@
-#include "objectmng.h"
+#include "datamanager.h"
 #include <QDebug>
 #include <QDateTime>
 #include <QMutexLocker>
 
 
 ////////////////////////////////////////////////////////////
-ObjectMng::ObjectMng(QObject *parent) : QObject(parent)
+DataManager::DataManager(QObject *parent) : QObject(parent)
 {
     db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName(DB_NAME);
@@ -18,16 +18,17 @@ ObjectMng::ObjectMng(QObject *parent) : QObject(parent)
 }
 
 ////////////////////////////////////////////////////////////
-void ObjectMng::add(TrObject obj)
+void DataManager::add(TrObject obj)
 {
     m_objectList.append(obj);
 }
 
 ////////////////////////////////////////////////////////////
-void ObjectMng::init()
+void DataManager::init()
 {
     TrObject obj;
     QSqlQuery query(db);
+    QString str;
 
     QStringList tables = db.tables();
 
@@ -42,15 +43,26 @@ void ObjectMng::init()
                       "rts DATETIME DEFAULT CURRENT_TIMESTAMP,"
                       "wts DATETIME DEFAULT CURRENT_TIMESTAMP)").arg(obj.name));
         if(query.exec()){
-            DEBUG_SQLITE(QString("Created table %1").arg(obj.name))
+            DEBUG_SQLITE(QString("Created table %1").arg(obj.name));
+            str = QString("INSERT INTO %1 (rts, wts, value) VALUES ('%2', '%3', '%4');")
+                    .arg(obj.name)
+                    .arg(obj.rts)
+                    .arg(obj.wts)
+                    .arg(obj.value);
+            DEBUG_SQLITE(str)
+            if(query.exec(str) == false){
+                DEBUG_SQLITE("Error: " + query.lastError())
+            }
         }else{
             DEBUG_SQLITE("Error: " + query.lastError())
         }
     }
 }
 
-bool ObjectMng::exec(TrAction tr)
+bool DataManager::exec(TrAction tr)
 {
+    QMutexLocker ml(&mMutex);
+
     if(tr.type == READ){
         return read(tr);
     }
@@ -59,10 +71,8 @@ bool ObjectMng::exec(TrAction tr)
 
 
 ////////////////////////////////////////////////////////////
-bool ObjectMng::write(TrAction action)
+bool DataManager::write(TrAction action)
 {
-    QMutexLocker ml(&mMutex);
-
     QSqlQuery query(db);
     QString str, jsonStr;
     TrObject obj;
@@ -112,10 +122,8 @@ bool ObjectMng::write(TrAction action)
 }
 
 ////////////////////////////////////////////////////////////
-bool ObjectMng::read(TrAction action)
+bool DataManager::read(TrAction action)
 {
-    QMutexLocker ml(&mMutex);
-
     QSqlQuery query(db);
     QString str;
     TrObject obj;
@@ -142,7 +150,7 @@ bool ObjectMng::read(TrAction action)
         str = QString("INSERT INTO %1 (rts, wts, value) VALUES ('%2', '%3', '%4');")
                 .arg(action.trObject.name)
                 .arg(action.trObject.rts)
-                .arg(action.trObject.eer6wts)
+                .arg(action.trObject.wts)
                 .arg(action.trObject.value);
         DEBUG_SQLITE(str)
         if(query.exec(str)){
@@ -165,7 +173,7 @@ bool ObjectMng::read(TrAction action)
 
 
 ////////////////////////////////////////////////////////////
-void ObjectMng::approve(QString jsonStr){
+void DataManager::approve(QString jsonStr){
     TrObject obj;
     QSqlQuery query(db);
     QString str = QString("INSERT INTO %1 (rts, wts, value) VALUES (%2, %3, '%4');")
@@ -179,22 +187,27 @@ void ObjectMng::approve(QString jsonStr){
     qDebug() << str;
 }
 
-QList<TrObject> ObjectMng::objectList() const
+QList<TrObject> DataManager::objectList() const
 {
     return m_objectList;
 }
 
-void ObjectMng::setObjectList(const QList<TrObject> &objectList)
+void DataManager::setObjectList(const QList<TrObject> &objectList)
 {
     m_objectList = objectList;
 }
 
-QString ObjectMng::objectListStr() const
+QString DataManager::objectListStr() const
 {
     return m_objectListStr;
 }
 
-void ObjectMng::setObjectListStr(const QString &objectListStr)
+void DataManager::setObjectListStr(const QString &objectListStr)
 {
     m_objectListStr = objectListStr;
+}
+
+QStringList DataManager::objectQStringList()
+{
+    return db.tables();
 }

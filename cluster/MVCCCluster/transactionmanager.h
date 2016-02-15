@@ -1,16 +1,18 @@
-#ifndef TRANSACTIONMNG_H
-#define TRANSACTIONMNG_H
+#ifndef TRANSACTIONMANAGER_H
+#define TRANSACTIONMANAGER_H
 
 #include <QObject>
 #include <QList>
 #include "types.h"
-#include "objectmng.h"
+#include "datamanager.h"
+#include <QMutex>
+#include <QMutexLocker>
 
-class TransactionMng : public QObject
+class TransactionManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit TransactionMng(QObject *parent = 0);
+    explicit TransactionManager(QObject *parent = 0);
 
     static long actionOrder();
 
@@ -21,6 +23,9 @@ public:
     void setCrtTransaction(const Transaction &crtTransaction);
 
     void addTransaction(const Transaction transaction);
+
+    QStringList tables() const;
+    void setTables(const QStringList &tables);
 
 signals:
     void exec(TrAction);
@@ -37,10 +42,14 @@ public slots:
 private:
     static long m_actionOrder;
 
-    ObjectMng *m_objectMng;
+    DataManager *m_objectMng;
 
     Transaction m_crtTransaction;
     QList<Transaction> m_transactionList;
+
+    QStringList m_tables;
+
+    QMutex mMutex;
 };
 
-#endif // TRANSACTIONMNG_H
+#endif // TRANSACTIONMANAGER_H

@@ -6,9 +6,8 @@ CONFIG += c++11
 TARGET = MVCCCluster
 
 SOURCES += main.cpp \
-    transactionmng.cpp \
-    objectmng.cpp \
-    global.cpp
+    transactionmanager.cpp \
+    datamanager.cpp
 
 RESOURCES += qml.qrc
 
@@ -19,7 +18,7 @@ QML_IMPORT_PATH =
 include(deployment.pri)
 
 HEADERS += \
-    transactionmng.h \
     types.h \
-    objectmng.h \
-    global.h
+    global.h \
+    transactionmanager.h \
+    datamanager.h

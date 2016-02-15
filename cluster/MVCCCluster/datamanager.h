@@ -1,5 +1,5 @@
-#ifndef OBJECTMNG_H
-#define OBJECTMNG_H
+#ifndef DATAMANAGER_H
+#define DATAMANAGER_H
 
 #include <QObject>
 #include "global.h"
@@ -24,11 +24,11 @@
 #endif
 
 
-class ObjectMng : public QObject
+class DataManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit ObjectMng(QObject *parent = 0);
+    explicit DataManager(QObject *parent = 0);
 
     void add(TrObject obj);
     bool exec(TrAction);
@@ -38,6 +38,8 @@ public:
 
     QString objectListStr() const;
     void setObjectListStr(const QString &objectListStr);
+
+    QStringList objectQStringList();
 
 signals:
     void sync(QString);
@@ -60,4 +62,4 @@ private:
     QMutex mMutex;
 };
 
-#endif // OBJECTMNG_H
+#endif // DATAMANAGER_H

@@ -1,56 +1,48 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QDateTime>
-#include "objectmng.h"
-#include "transactionmng.h"
+#include "datamanager.h"
+#include "transactionmanager.h"
 #include <QObject>
 #include <QThread>
+#include <QDebug>
 
 
-void initTransactionMng(TransactionMng *transactionMng, int offset){
-    TrObject objectX;
-    objectX.name = "X";
-    objectX.rts = 0;
-    objectX.wts = 0;
-    objectX.value = "1";
-
-    TrObject objectY;
-    objectY.name = "Y";
-    objectY.rts = 0;
-    objectY.wts = 0;
-    objectY.value = "1";
-
-
-    TrObject object;
-    TrAction action1, action2;
-    Transaction transaction;
-
+void initTransactionManager(TransactionManager *transactionMng, int offset){
     // add transactions to transactionMng on Thread 1
     int i = offset * MAX_TRANSACTION_NO + 1;
     int total = i + MAX_TRANSACTION_NO;
+
     while(i < total){
+        Transaction transaction;
+        int j = 0;
+        while(j < MAX_OBJECT_PER_TRANSACTION){
+            TrObject object;
+            TrAction action1, action2;
 
-        if(rand()%2){
-            object = objectX;
-        }else{
-            object = objectY;
+            object.name = QString("%1").arg(QChar('A' + char(rand() % ('H' - 'A'))));
+            object.rts = 0;
+            object.wts = 0;
+            object.value = QString("%1").arg(i);
+
+            char tmp[4];
+            sprintf(tmp, "T%03d", i);
+            transaction.name = QString("%1").arg(tmp);
+            transaction.ts = QDateTime::currentMSecsSinceEpoch();
+            transaction.status = STARTED;
+            QThread::msleep(1);
+
+            // add actions to transaction
+            action1.trObject = object;
+            action1.type = READ;
+            transaction.actionList.append(action1);
+
+            object.value = QString("val%1").arg(i);
+            action2.trObject = object;
+            action2.type = WRITE;
+            transaction.actionList.append(action2);
+            j++;
         }
-
-        transaction.name = QString("T%1").arg(i);
-        transaction.ts = QDateTime::currentMSecsSinceEpoch();
-        transaction.status = STARTED;
-        QThread::msleep(1);
-
-        // add actions to transaction
-        action1.trObject = object;
-        action1.type = READ;
-        transaction.actionList.append(action1);
-
-        object.value = QString("val%1").arg(i);
-        action2.trObject = object;
-        action2.type = WRITE;
-        transaction.actionList.append(action2);
-
         transactionMng->addTransaction(transaction);
 
         i++;
@@ -62,26 +54,29 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    ObjectMng *objectMng = new ObjectMng();
+    DataManager *objectMng = new DataManager();
 
-    TrObject obj;
-    obj.name = "Y";
-    obj.rts = 0;
-    obj.wts = 0;
-    obj.value = "1";
-    objectMng->add(obj);
-
-    TrObject obj1;
-    obj1.name = "Y";
-    obj1.rts = 0;
-    obj1.wts = 0;
-    obj1.value = "1";
-    objectMng->add(obj1);
+    for(int i=int('A'); i<int('H'); i++){
+        TrObject object;
+        object.name = QString("%1").arg(QChar(i));
+        object.rts = 0;
+        object.wts = 0;
+        object.value = "1";
+        objectMng->add(object);
+    }
 
     objectMng->init();
 
-    TransactionMng *transactionMng = new TransactionMng();
-    TransactionMng *transactionMng2 = new TransactionMng();
+    QStringList tables = objectMng->objectQStringList();
+    QString objectList, tmp;
+    foreach (objectList, tables) {
+        if(objectList.size() > 1)
+            continue;
+        tmp += QString("|     %1    ").arg(objectList);
+    }
+
+    TransactionManager *transactionMng = new TransactionManager();
+    TransactionManager *transactionMng2 = new TransactionManager();
 
     QThread *thread = new QThread();
     QThread *thread2 = new QThread();
@@ -99,11 +94,17 @@ int main(int argc, char *argv[])
     QObject::connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
     QObject::connect(thread2, SIGNAL(finished()), thread2, SLOT(deleteLater()));
 
-    initTransactionMng(transactionMng, 0);
-    initTransactionMng(transactionMng2, 1);
+    initTransactionManager(transactionMng, 0);
+    initTransactionManager(transactionMng2, 1);
 
     transactionMng->setObjectName("thread_1");
     transactionMng2->setObjectName("thread_2");
+
+    transactionMng->setTables(tables);
+    transactionMng2->setTables(tables);
+
+    qDebug() << "";
+    qDebug() << QString("------------------------- %1.").arg(tmp);
 
     thread2->start();
     thread->start();

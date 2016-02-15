@@ -6,7 +6,8 @@
 //#define DEBUG_SQL
 //#define DEBUG_ACTIONS
 
-#define MAX_TRANSACTION_NO 2
+#define MAX_TRANSACTION_NO 1
+#define MAX_OBJECT_PER_TRANSACTION 50
 
 #endif // GLOBAL_H
 
